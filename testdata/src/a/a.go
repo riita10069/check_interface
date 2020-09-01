@@ -1,8 +1,16 @@
 package a
 
-func f() {
-	// The pattern can be written in regular expression.
-	var gopher int // want "pattern"
-	print(gopher)  // want "identifier is gopher"
+import "fmt"
+
+type a struct {}
+
+type aInterface interface {
+	f(a int64)
+	g(a int64) // want "NG"
 }
+
+func (this a)f(a int64) {
+	fmt.Println(a)
+}
+
 

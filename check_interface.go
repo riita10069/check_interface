@@ -24,18 +24,20 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 
 	nodeFilter := []ast.Node{
-		(*ast.Ident)(nil),
+		(*ast.InterfaceType)(nil),
 	}
 
 	inspect.Preorder(nodeFilter, func(n ast.Node) {
 		switch n := n.(type) {
-		case *ast.Ident:
-			if n.Name == "gopher" {
-				pass.Reportf(n.Pos(), "identifier is gopher")
+		case *ast.InterfaceType:
+			if n.Incomplete {
+				pass.Reportf(n.Pos(), "methods are missing in the Methods list")
+			}
+			for _, method := range n.Methods.List {
+				
 			}
 		}
 	})
 
 	return nil, nil
 }
-

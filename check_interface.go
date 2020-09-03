@@ -26,7 +26,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	functionFilter := []ast.Node{(*ast.FuncDecl)(nil)}
 
 	// map[シグネイチャ（メソッド名・引数・戻り値）][]struct
-	signatureMap := make(map[types.Signature][]types.Type)
+	signatureMap := make(map[*types.Signature][]types.Type)
 	var signatureObj *types.Signature
 
 	// 実装してあるstructを保存する map[構造体名]実装メソッドカウント
@@ -37,10 +37,10 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		case *ast.FuncDecl:
 			signatureObj = pass.TypesInfo.ObjectOf(funcNode.Name).Type().(*types.Signature)
 			recv := signatureObj.Recv().Type()
-			if v, ok := signatureMap[*signatureObj]; ok {
-				signatureMap[*signatureObj] = append(v, recv)
+			if v, ok := signatureMap[signatureObj]; ok {
+				signatureMap[signatureObj] = append(v, recv)
 			} else {
-				signatureMap[*signatureObj] = []types.Type{recv}
+				signatureMap[signatureObj] = []types.Type{recv}
 			}
 
 			// implementsをあらかじめ作っておく
@@ -83,6 +83,12 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				//fmt.Println(methodField.Names[0].Name)
 				recvs, ok := signatureMap[*signatureObj]
 
+				for signature, recv := range signatureMap {
+					types.Identical(signatureObj, signature)
+				}
+				fmt.Println(*signatureObj)
+				fmt.Println(signatureMap)
+
 				if !ok {
 					continue
 				}
@@ -92,15 +98,31 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				}
 			}
 
-			if len(implements) < len(methodList) {
-				pass.Reportf(interfaceNode.Pos(), "not implemented")
-				_, key := maxMap(implements)
-				if key != nil {
-					// pass.Reportf(interfaceNode.Pos(), "Is it %s you want to implement?", key)
+			//max, _ := maxMap(implements)
+			//if key != nil {
+			//	pass.Reportf(interfaceNode.Pos(), "Is it %s you want to implement?", key)
+			//}
+
+			for _, impl := range implements {
+				if impl < len(methodList) {
+					//fmt.Println(k)
+					//fmt.Println(impl)
+					//fmt.Println(len(methodList))
+					pass.Reportf(interfaceNode.Pos(), "not implemented")
 				}
-			} else {
-				fmt.Println("OK")
 			}
+
+			//if max < len(methodList) {
+			//	fmt.Println(len(implements))
+			//	fmt.Println(len(methodList))
+			//	pass.Reportf(interfaceNode.Pos(), "not implemented")
+			//	//_, key := maxMap(implements)
+			//	//if key != nil {
+			//	//	// pass.Reportf(interfaceNode.Pos(), "Is it %s you want to implement?", key)
+			//	//}
+			//} else {
+			//	fmt.Println("OK")
+			//}
 		}
 	})
 	return nil, nil

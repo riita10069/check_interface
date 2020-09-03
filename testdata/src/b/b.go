@@ -6,7 +6,7 @@ type bs struct{}
 
 type BInterface interface { // want "not implemented"
 	bf(z int64) (int64, int64, string)
-	bf2(z int64) (int64, string, string)
+	bf2(z int64) (int64, int64, string)
 }
 
 func (this bs) bf(a int64) (b, c int64, d string) {

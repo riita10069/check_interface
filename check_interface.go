@@ -1,7 +1,6 @@
 package check_interface
 
 import (
-	"fmt"
 	"go/ast"
 	"go/types"
 	"golang.org/x/tools/go/analysis"
@@ -25,7 +24,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 	functionFilter := []ast.Node{(*ast.FuncDecl)(nil)}
 
-	// map[シグネイチャ（メソッド名・引数・戻り値）][]struct
+	// map[メソッドの情報]構造体の配列(キーのメソッドを持っているもの）
 	signatureMap := make(map[*types.Object][]types.Type)
 
 	// 実装してあるstructを保存する map[構造体名]実装メソッドカウント
@@ -54,102 +53,37 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	inspect.Preorder(interfaceFilter, func(interfaceNode ast.Node) {
 		switch interfaceNode := interfaceNode.(type) {
 		case *ast.InterfaceType:
-			//var params, ret, name string
 			methodList := interfaceNode.Methods.List
-
-			//fmt.Print("implements = ", implements)
-
 			for _, methodField := range methodList {
 
 				signatureObj := pass.TypesInfo.ObjectOf(methodField.Names[0])
 
-				//switch methodType := methodField.Type.(type) {
-				//case *ast.FuncType:
-				//if methodType.Params != nil {
-				//	params = getString(methodType.Params.List)
-				//}
-				//if methodType.Results != nil {
-				//	ret = getString(methodType.Results.List)
-				//}
-				//name = methodField.Names[0].Name
-				//
-				//signature := strings.Join([]string{name, params, ret}, "/")
-				//
-				//recv, ok := signatureMap[signature]
-				//if !ok {
-				//	// 実装されている構造体が１つもなかった場合にimplementsをnilにする
-				//	continue
-				//}
-				//fmt.Println(methodField.Names[0].Name)
-				//recvs, ok := signatureMap[signatureObj]
-				//fmt.Println("recvs = ", recvs)
-
 				for signature, _ := range signatureMap {
-
+					// シグネイチャと名前がsignatureMapに登録されているもののカウントを増やす
 					if types.Identical(signatureObj.Type().(*types.Signature), (*signature).Type().(*types.Signature)) && signatureObj.Name() == (*signature).Name() {
-						implements[signature]++
+						implements[(*signature).Type().(*types.Signature).Recv().Type()]++
 					}
 				}
-				fmt.Println(*signatureObj)
-				fmt.Println(signatureMap)
-
-				//if !ok {
-				//	continue
-				//}
-
-				//for _, s := range recvs {
-				//	implements[s] = implements[s] + 1
-				//}
 			}
-
-			//max, _ := maxMap(implements)
-			//if key != nil {
-			//	pass.Reportf(interfaceNode.Pos(), "Is it %s you want to implement?", key)
-			//}
-
 
 			for _, impl := range implements {
 				if impl < len(methodList) {
-					//fmt.Println(k)
-					//fmt.Println(impl)
-					//fmt.Println(len(methodList))
 					pass.Reportf(interfaceNode.Pos(), "not implemented")
 				}
 			}
-
-			//if max < len(methodList) {
-			//	fmt.Println(len(implements))
-			//	fmt.Println(len(methodList))
-			//	pass.Reportf(interfaceNode.Pos(), "not implemented")
-			//	//_, key := maxMap(implements)
-			//	//if key != nil {
-			//	//	// pass.Reportf(interfaceNode.Pos(), "Is it %s you want to implement?", key)
-			//	//}
-			//} else {
-			//	fmt.Println("OK")
-			//}
 		}
 	})
 	return nil, nil
 }
 
-func maxMap(implements map[types.Type]int) (int, types.Type) {
-	ret := 0
-	var key types.Type
-	for k, i := range implements {
-		if i > ret {
-			ret = i
-			key = k
-		}
-	}
-	return ret, key
-}
-
-func getString(lists []*ast.Field) string {
-	str := ""
-	for _, list := range lists {
-		str += fmt.Sprint(list.Type)
-		str += ","
-	}
-	return str
-}
+//func maxMap(implements map[types.Type]int) (int, types.Type) {
+//	ret := 0
+//	var key types.Type
+//	for k, i := range implements {
+//		if i > ret {
+//			ret = i
+//			key = k
+//		}
+//	}
+//	return ret, key
+//}

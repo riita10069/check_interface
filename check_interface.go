@@ -7,6 +7,7 @@ import (
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
 	"golang.org/x/tools/go/ast/inspector"
+	"strings"
 )
 
 const doc = "check_interface is ..."
@@ -42,72 +43,50 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	inspect.Preorder(interfaceFilter, func(interfaceNode ast.Node) {
 		switch interfaceNode := interfaceNode.(type) {
 		case *ast.InterfaceType:
-
-			//var params, ret, name string
+			var params, ret, name string
 			methodList := interfaceNode.Methods.List
-			//var once sync.Once
 			// 実装してあるstructを保存する map[構造体名]実装しているか
-			//implements := map[string]bool{}
+			implements := map[string]int{}
+			fmt.Print("implements = ", implements)
 			for _, methodField := range methodList {
+				switch methodType := methodField.Type.(type) {
+				case *ast.FuncType:
+					if methodType.Params != nil {
+						params = getString(methodType.Params.List)
+					}
+					if methodType.Results != nil {
+						ret = getString(methodType.Results.List)
+					}
+					name = methodField.Names[0].Name
 
-				tmp2 := pass.TypesInfo.ObjectOf(methodField.Names[0]).Type().(*types.Signature)
-				fmt.Println("tmp2")
-				fmt.Println(tmp2)
+					signature := strings.Join([]string{name, params, ret}, "/")
 
-				fmt.Println("identical", types.Identical(signatureObj, tmp2))
+					recv, ok := signatureMap[signature]
+					if !ok {
+						// 実装されている構造体が１つもなかった場合にimplementsをnilにする
+						continue
+					}
 
-				//switch methodType := methodField.Type.(type) {
-				//case *ast.FuncType:
-				//	if methodType.Params != nil {
-				//		params = getString(methodType.Params.List)
-				//	}
-				//	if methodType.Results != nil {
-				//		ret = getString(methodType.Results.List)
-				//	}
-				//	name = methodField.Names[0].Name
-				//
-				//	signature := strings.Join([]string{name, params, ret}, "/")
-				//
-				//	recv, ok := signatureMap[signature]
-				//	if !ok {
-				//		// 実装されている構造体が１つもなかった場合にimplementsをnilにする
-				//		implements = nil
-				//		break
-				//	}
-				//
-				//	// 最初のメソッドで該当する構造体をimplementsに格納
-				//	once.Do(func() {
-				//		for _, s := range recv {
-				//			implements[s] = true
-				//		}
-				//	})
-				//
-				//	for k := range implements {
-				//		for _, s := range recv {
-				//			// implementとstructで同値の物がないときfalseに更新
-				//			if k != s {
-				//				implements[k] = false
-				//			}
-				//		}
-				//	}
-				//}
+					for _, s := range recv {
+						_, notInit := implements[s]
+						if notInit {
+							implements[s] = implements[s] + 1
+						} else {
+							implements[s] = 1
+						}
+					}
+				}
 			}
 
-			//if implements == nil {
-			//	pass.Reportf(interfaceNode.Pos(), "not implemented")
-			//}
-			//
-			//isImplement := true
-			//for _, implement := range implements {
-			//	isImplement = isImplement && implement
-			//}
-			//if !isImplement {
-			//	pass.Reportf(interfaceNode.Pos(), "not implemented")
-			//
-			//}
+			if len(implements) < len(methodList) {
+				pass.Reportf(interfaceNode.Pos(), "not implemented")
+				_, key := maxMap(implements)
+				pass.Reportf(interfaceNode.Pos(),"Is it %s you want to implement?", key)
+			} else {
+				fmt.Println("OK")
+			}
 		}
 	})
-
 	return nil, nil
 }
 

@@ -23,50 +23,22 @@ var Analyzer = &analysis.Analyzer{
 
 func run(pass *analysis.Pass) (interface{}, error) {
 	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
-
-	functionFilter := []ast.Node{
-		(*ast.FuncDecl)(nil),
-	}
-
-	interfaceFilter := []ast.Node{
-		(*ast.InterfaceType)(nil),
-	}
-
-	//signatureMap := make(map[string][]string)
-
-	var tmp *types.Signature
+	functionFilter := []ast.Node{ (*ast.FuncDecl)(nil), }
+	signatureMap := make(map[*types.Signature][]types.Type)
+	var signatureObj *types.Signature
 
 	inspect.Preorder(functionFilter, func(funcNode ast.Node) {
 		switch funcNode := funcNode.(type) {
 		case *ast.FuncDecl:
-
-			tmp = pass.TypesInfo.ObjectOf(funcNode.Name).Type().(*types.Signature)
-			fmt.Println("tmp")
-			fmt.Println(tmp)
-			//
-			//var recv, params, ret, name string
-			//if funcNode.Recv != nil {
-			//	recv = fmt.Sprint(funcNode.Recv.List[0].Type)
-			//}
-			//if funcNode.Type.Params != nil {
-			//	params = getString(funcNode.Type.Params.List)
-			//}
-			//if funcNode.Type.Results != nil {
-			//	ret = getString(funcNode.Type.Results.List)
-			//}
-			//name = funcNode.Name.Name
-			//
-			//signature := strings.Join([]string{name, params, ret}, "/")
-			//
-			//if v, ok := signatureMap[signature]; ok {
-			//	signatureMap[signature] = append(v, recv)
-			//} else {
-			//	signatureMap[signature] = []string{recv}
-			//}
-
+			signatureObj = pass.TypesInfo.ObjectOf(funcNode.Name).Type().(*types.Signature)
+			recv := signatureObj.Recv().Type()
+			if v, ok := signatureMap[signatureObj]; ok {
+				signatureMap[signatureObj] = append(v, recv)
+			}
 		}
 	})
 
+	interfaceFilter := []ast.Node{ (*ast.InterfaceType)(nil), }
 	inspect.Preorder(interfaceFilter, func(interfaceNode ast.Node) {
 		switch interfaceNode := interfaceNode.(type) {
 		case *ast.InterfaceType:
@@ -82,7 +54,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				fmt.Println("tmp2")
 				fmt.Println(tmp2)
 
-				fmt.Println(types.Identical(tmp, tmp2))
+				fmt.Println("identical", types.Identical(signatureObj, tmp2))
 
 				//switch methodType := methodField.Type.(type) {
 				//case *ast.FuncType:

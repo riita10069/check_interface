@@ -6,7 +6,7 @@ import (
 
 type a struct {}
 
-type AInterface interface { // want "There is not match function"
+type AInterface interface { // want "not implemented"
 	f(a int64)
 	g(a int64)
 }

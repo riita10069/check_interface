@@ -6,6 +6,8 @@ import (
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
 	"golang.org/x/tools/go/ast/inspector"
+	"strings"
+	"sync"
 )
 
 const doc = "check_interface is ..."
@@ -31,12 +33,12 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		(*ast.InterfaceType)(nil),
 	}
 
-	hash := make(map[string]*string)
+	signatureMap := make(map[string][]string)
 
 	inspect.Preorder(functionFilter, func(funcNode ast.Node) {
 		switch funcNode := funcNode.(type) {
 		case *ast.FuncDecl:
-			var recv, params, ret string
+			var recv, params, ret, name string
 			if funcNode.Recv != nil {
 				recv = fmt.Sprint(funcNode.Recv.List[0].Type)
 			}
@@ -46,14 +48,14 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			if funcNode.Type.Results != nil {
 				ret = getString(funcNode.Type.Results.List)
 			}
+			name = funcNode.Name.Name
 
-			signature := params + "/" + ret
+			signature := strings.Join([]string{name, params, ret}, "/")
 
-
-			if v, ok := hash[signature]; ok {
-				*hash[signature] += *v + ","
+			if v, ok := signatureMap[signature]; ok {
+				signatureMap[signature] = append(v, recv)
 			} else {
-				hash[signature] = &recv
+				signatureMap[signature] = []string{recv}
 			}
 
 		}
@@ -62,8 +64,11 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	inspect.Preorder(interfaceFilter, func(interfaceNode ast.Node) {
 		switch interfaceNode := interfaceNode.(type) {
 		case *ast.InterfaceType:
-			var recv, params, ret string
+			var params, ret, name string
 			methodList := interfaceNode.Methods.List
+			var once sync.Once
+			// 実装してあるstructを保存する map[構造体名]実装しているか
+			implements := map[string]bool{}
 			for _, methodField := range methodList {
 				switch methodType := methodField.Type.(type) {
 				case *ast.FuncType:
@@ -73,13 +78,48 @@ func run(pass *analysis.Pass) (interface{}, error) {
 					if methodType.Results != nil {
 						ret = getString(methodType.Results.List)
 					}
-					signature := params + "/" + ret
+					name = methodField.Names[0].Name
 
-					recv = *hash[signature]
-					println(recv)
+					signature := strings.Join([]string{name, params, ret}, "/")
+
+					recv, ok := signatureMap[signature]
+					if !ok {
+						// 実装されている構造体が１つもなかった場合にimplementsをnilにする
+						implements = nil
+						break
+					}
+
+					// 最初のメソッドで該当する構造体をimplementsに格納
+					once.Do(func() {
+						for _, s := range recv {
+							implements[s] = true
+						}
+					})
+
+					for k := range implements {
+						for _, s := range recv {
+							// implementとstructで同値の物がないときfalseに更新
+							if k != s {
+								implements[k] = false
+							}
+						}
+					}
 				}
 			}
-		}
+
+			if implements == nil {
+				pass.Reportf(interfaceNode.Pos(), "not implemented")
+			}
+
+			isImplement := true
+			for _, implement := range implements {
+				isImplement = isImplement && implement
+			}
+			if !isImplement {
+				pass.Reportf(interfaceNode.Pos(), "not implemented")
+
+				}
+			}
 	})
 
 	return nil, nil

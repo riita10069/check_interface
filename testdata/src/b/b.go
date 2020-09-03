@@ -4,11 +4,11 @@ import "fmt"
 
 type b struct {}
 
-type bInterface interface {
+
+type BInterface interface {
 	f(a int64)
 }
 
 func (this b)f(a int64) {
 	fmt.Println(a)
 }
-

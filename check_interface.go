@@ -26,8 +26,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	functionFilter := []ast.Node{(*ast.FuncDecl)(nil)}
 
 	// map[シグネイチャ（メソッド名・引数・戻り値）][]struct
-	signatureMap := make(map[*types.Signature][]types.Type)
-	var signatureObj *types.Signature
+	signatureMap := make(map[*types.Object][]types.Type)
 
 	// 実装してあるstructを保存する map[構造体名]実装メソッドカウント
 	implements := map[types.Type]int{}
@@ -35,12 +34,13 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	inspect.Preorder(functionFilter, func(funcNode ast.Node) {
 		switch funcNode := funcNode.(type) {
 		case *ast.FuncDecl:
-			signatureObj = pass.TypesInfo.ObjectOf(funcNode.Name).Type().(*types.Signature)
-			recv := signatureObj.Recv().Type()
-			if v, ok := signatureMap[signatureObj]; ok {
-				signatureMap[signatureObj] = append(v, recv)
+			signatureObj := pass.TypesInfo.ObjectOf(funcNode.Name)
+			recv := pass.TypesInfo.ObjectOf(funcNode.Name).Type().(*types.Signature).Recv().Type()
+
+			if v, ok := signatureMap[&signatureObj]; ok {
+				signatureMap[&signatureObj] = append(v, recv)
 			} else {
-				signatureMap[signatureObj] = []types.Type{recv}
+				signatureMap[&signatureObj] = []types.Type{recv}
 			}
 
 			// implementsをあらかじめ作っておく
@@ -61,7 +61,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 			for _, methodField := range methodList {
 
-				signatureObj = pass.TypesInfo.ObjectOf(methodField.Names[0]).Type().(*types.Signature)
+				signatureObj := pass.TypesInfo.ObjectOf(methodField.Names[0])
 
 				//switch methodType := methodField.Type.(type) {
 				//case *ast.FuncType:
@@ -81,27 +81,32 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				//	continue
 				//}
 				//fmt.Println(methodField.Names[0].Name)
-				recvs, ok := signatureMap[*signatureObj]
+				//recvs, ok := signatureMap[signatureObj]
+				//fmt.Println("recvs = ", recvs)
 
-				for signature, recv := range signatureMap {
-					types.Identical(signatureObj, signature)
+				for signature, _ := range signatureMap {
+
+					if types.Identical(signatureObj.Type().(*types.Signature), (*signature).Type().(*types.Signature)) && signatureObj.Name() == (*signature).Name() {
+						implements[signature]++
+					}
 				}
 				fmt.Println(*signatureObj)
 				fmt.Println(signatureMap)
 
-				if !ok {
-					continue
-				}
+				//if !ok {
+				//	continue
+				//}
 
-				for _, s := range recvs {
-					implements[s] = implements[s] + 1
-				}
+				//for _, s := range recvs {
+				//	implements[s] = implements[s] + 1
+				//}
 			}
 
 			//max, _ := maxMap(implements)
 			//if key != nil {
 			//	pass.Reportf(interfaceNode.Pos(), "Is it %s you want to implement?", key)
 			//}
+
 
 			for _, impl := range implements {
 				if impl < len(methodList) {

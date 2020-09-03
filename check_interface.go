@@ -1,11 +1,13 @@
 package check_interface
 
 import (
+	"fmt"
 	"go/ast"
-
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
 	"golang.org/x/tools/go/ast/inspector"
+	"strings"
+	"sync"
 )
 
 const doc = "check_interface is ..."
@@ -23,21 +25,112 @@ var Analyzer = &analysis.Analyzer{
 func run(pass *analysis.Pass) (interface{}, error) {
 	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 
-	nodeFilter := []ast.Node{
+	functionFilter := []ast.Node{
+		(*ast.FuncDecl)(nil),
+	}
+
+	interfaceFilter := []ast.Node {
 		(*ast.InterfaceType)(nil),
 	}
 
-	inspect.Preorder(nodeFilter, func(n ast.Node) {
-		switch n := n.(type) {
-		case *ast.InterfaceType:
-			if n.Incomplete {
-				pass.Reportf(n.Pos(), "methods are missing in the Methods list")
+	signatureMap := make(map[string][]string)
+
+	inspect.Preorder(functionFilter, func(funcNode ast.Node) {
+		switch funcNode := funcNode.(type) {
+		case *ast.FuncDecl:
+			var recv, params, ret, name string
+			if funcNode.Recv != nil {
+				recv = fmt.Sprint(funcNode.Recv.List[0].Type)
 			}
-			for _, method := range n.Methods.List {
-				
+			if funcNode.Type.Params != nil {
+				params = getString(funcNode.Type.Params.List)
 			}
+			if funcNode.Type.Results != nil {
+				ret = getString(funcNode.Type.Results.List)
+			}
+			name = funcNode.Name.Name
+
+			signature := strings.Join([]string{name, params, ret}, "/")
+
+			if v, ok := signatureMap[signature]; ok {
+				signatureMap[signature] = append(v, recv)
+			} else {
+				signatureMap[signature] = []string{recv}
+			}
+
 		}
+	})
+
+	inspect.Preorder(interfaceFilter, func(interfaceNode ast.Node) {
+		switch interfaceNode := interfaceNode.(type) {
+		case *ast.InterfaceType:
+			var params, ret, name string
+			methodList := interfaceNode.Methods.List
+			var once sync.Once
+			// 実装してあるstructを保存する map[構造体名]実装しているか
+			implements := map[string]bool{}
+			for _, methodField := range methodList {
+				switch methodType := methodField.Type.(type) {
+				case *ast.FuncType:
+					if methodType.Params != nil {
+						params = getString(methodType.Params.List)
+					}
+					if methodType.Results != nil {
+						ret = getString(methodType.Results.List)
+					}
+					name = methodField.Names[0].Name
+
+					signature := strings.Join([]string{name, params, ret}, "/")
+
+					recv, ok := signatureMap[signature]
+					if !ok {
+						// 実装されている構造体が１つもなかった場合にimplementsをnilにする
+						implements = nil
+						break
+					}
+
+					// 最初のメソッドで該当する構造体をimplementsに格納
+					once.Do(func() {
+						for _, s := range recv {
+							implements[s] = true
+						}
+					})
+
+					for k := range implements {
+						for _, s := range recv {
+							// implementとstructで同値の物がないときfalseに更新
+							if k != s {
+								implements[k] = false
+							}
+						}
+					}
+				}
+			}
+
+			if implements == nil {
+				pass.Reportf(interfaceNode.Pos(), "not implemented")
+			}
+
+			isImplement := true
+			for _, implement := range implements {
+				isImplement = isImplement && implement
+			}
+			if !isImplement {
+				pass.Reportf(interfaceNode.Pos(), "not implemented")
+
+				}
+			}
 	})
 
 	return nil, nil
 }
+
+func getString(lists []*ast.Field) string {
+	str := ""
+	for _, list := range lists {
+		str += fmt.Sprint(list.Type)
+		str += ","
+	}
+	return str
+}
+

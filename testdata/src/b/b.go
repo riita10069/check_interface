@@ -2,13 +2,16 @@ package b
 
 import "fmt"
 
-type b struct{}
+var _ BInterface = (bs)(nil)
 
-type BInterface interface {
+type bs struct{} // want "bf2がたりてないよ"
+
+type BInterface interface { // want "not implemented"
 	bf(z int64) (int64, int64, string)
+	bf2(z int64) (int64, int64, string)
 }
 
-func (this b) bf(a int64) (b, c int64, d string) {
+func (this bs) bf(a int64) (b, c int64, d string) {
 	fmt.Println(a)
 	return 0, 0, ""
 }

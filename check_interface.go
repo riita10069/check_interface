@@ -90,6 +90,17 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	return nil, nil
 }
 
+func maxMap(implements map[string]int) (int , string) {
+	ret := 0; var key string
+	for k, i := range implements {
+		if i > ret {
+			ret = i; key = k
+		}
+	}
+	return ret, key
+}
+
+
 func getString(lists []*ast.Field) string {
 	str := ""
 	for _, list := range lists {

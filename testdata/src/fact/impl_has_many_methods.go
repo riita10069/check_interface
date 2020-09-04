@@ -23,6 +23,7 @@ func (ImplHas) Invoke3(int) string {
 	return ""
 }
 
+// 異常系
 type NIImplHas interface { // want "not implemented"
 	Invoke(int32) string
 	Invoke2(int32) string

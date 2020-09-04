@@ -10,5 +10,19 @@ import (
 // TestAnalyzer is a test for Analyzer.
 func TestAnalyzer(t *testing.T) {
 	testdata := analysistest.TestData()
-	analysistest.Run(t, testdata, check_interface.Analyzer, "b")
+	analysistest.Run(
+		t,
+		testdata,
+		check_interface.Analyzer,
+		"a",
+		"application",
+		"b",
+		"blank",
+		"fact",
+		"missing",
+		"pointer",
+		"short_hand",
+		"slice",
+		"variable_length",
+	)
 }

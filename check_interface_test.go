@@ -14,8 +14,7 @@ func TestAnalyzer(t *testing.T) {
 		t,
 		testdata,
 		check_interface.Analyzer,
-		"a",
-		"b",
-	//""
+		"application",
+		"repository",
 	)
 }

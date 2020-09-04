@@ -6,6 +6,7 @@ import (
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
 	"golang.org/x/tools/go/ast/inspector"
+	"golang.org/x/tools/go/packages"
 )
 
 const doc = "check_interface is ..."
@@ -21,6 +22,7 @@ var Analyzer = &analysis.Analyzer{
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
+
 	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 	functionFilter := []ast.Node{(*ast.FuncDecl)(nil)}
 
@@ -92,3 +94,10 @@ func maxMap(implements map[types.Type]int) (int, types.Type) {
 	}
 	return ret, key
 }
+
+func LoadPkgs(includeTest bool, patterns ...string) ([]*packages.Package, error) {
+	mode := packages.NeedImports
+	cfg := &packages.Config{Mode: mode, Tests: includeTest}
+	return packages.Load(cfg, patterns...)
+}
+

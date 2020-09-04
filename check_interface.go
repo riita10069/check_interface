@@ -79,6 +79,9 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			max, _ := maxMap(implements)
 			if max < len(methodList) {
 				pass.Reportf(interfaceNode.Pos(), "not implemented")
+				//if key != nil {
+				//	pass.Reportf(interfaceNode.Pos(), fmt.Sprintf("Isn't this %s interface?", key.String() ))
+				//}
 			}
 		}
 	})

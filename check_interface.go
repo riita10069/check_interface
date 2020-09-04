@@ -53,6 +53,12 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	inspect.Preorder(interfaceFilter, func(interfaceNode ast.Node) {
 		switch interfaceNode := interfaceNode.(type) {
 		case *ast.InterfaceType:
+
+			// implementsの初期化
+			for k, _ := range implements {
+				implements[k] = 0
+			}
+
 			methodList := interfaceNode.Methods.List
 			for _, methodField := range methodList {
 
@@ -66,24 +72,23 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				}
 			}
 
-			for _, impl := range implements {
-				if impl < len(methodList) {
-					pass.Reportf(interfaceNode.Pos(), "not implemented")
-				}
+			max, _ := maxMap(implements)
+			if max < len(methodList) {
+				pass.Reportf(interfaceNode.Pos(), "not implemented")
 			}
 		}
 	})
 	return nil, nil
 }
 
-//func maxMap(implements map[types.Type]int) (int, types.Type) {
-//	ret := 0
-//	var key types.Type
-//	for k, i := range implements {
-//		if i > ret {
-//			ret = i
-//			key = k
-//		}
-//	}
-//	return ret, key
-//}
+func maxMap(implements map[types.Type]int) (int, types.Type) {
+	ret := 0
+	var key types.Type
+	for k, i := range implements {
+		if i > ret {
+			ret = i
+			key = k
+		}
+	}
+	return ret, key
+}

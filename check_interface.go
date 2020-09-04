@@ -6,7 +6,6 @@ import (
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
 	"golang.org/x/tools/go/ast/inspector"
-	"golang.org/x/tools/go/packages"
 )
 
 const doc = "check_interface is ..."
@@ -36,6 +35,9 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		switch funcNode := funcNode.(type) {
 		case *ast.FuncDecl:
 			signatureObj := pass.TypesInfo.ObjectOf(funcNode.Name)
+			if pass.TypesInfo.ObjectOf(funcNode.Name).Type().(*types.Signature).Recv() == nil {
+				break
+			}
 			recv := pass.TypesInfo.ObjectOf(funcNode.Name).Type().(*types.Signature).Recv().Type()
 
 			if v, ok := signatureMap[&signatureObj]; ok {
@@ -93,11 +95,5 @@ func maxMap(implements map[types.Type]int) (int, types.Type) {
 		}
 	}
 	return ret, key
-}
-
-func LoadPkgs(includeTest bool, patterns ...string) ([]*packages.Package, error) {
-	mode := packages.NeedImports
-	cfg := &packages.Config{Mode: mode, Tests: includeTest}
-	return packages.Load(cfg, patterns...)
 }
 

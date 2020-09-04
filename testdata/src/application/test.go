@@ -1,6 +1,6 @@
 package application
 
-import "github.com/riita10069/check_interface/testdata/src/application/repository"
+import "application/repository"
 
 type Test struct {
 	repos *repository.AllRepository

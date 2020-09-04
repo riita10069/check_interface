@@ -14,7 +14,15 @@ func TestAnalyzer(t *testing.T) {
 		t,
 		testdata,
 		check_interface.Analyzer,
+		"a",
 		"application",
-		"repository",
+		"b",
+		"blank",
+		"fact",
+		"missing",
+		"pointer",
+		"short_hand",
+		"slice",
+		"variable_length",
 	)
 }

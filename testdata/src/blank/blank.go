@@ -17,7 +17,7 @@ type GbadInterface interface { // want "not implemented"
 	gbad2(z int64) (int64, int64, string)
 }
 
-func (this g) gbad(_ int64) (b, c, d int64) {
+func (this gbad) gbad(_ int64) (b, c, d int64) {
 	return 0, 0, 0
 }
 

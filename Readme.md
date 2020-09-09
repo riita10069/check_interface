@@ -12,7 +12,7 @@
 ### How to install
 
 ```
-go get github.com/riita10069/check_interface
+go get github.com/riita10069/check_interface/cmd/check_interface
 ```
 
 ### Usage Example
